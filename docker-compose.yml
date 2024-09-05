@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongoEventStore
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_container:/data/db
+    networks:
+      - bankNet
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: always
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper-data:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - bankNet
+
+  kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+    restart: always
+    volumes:
+      - "kafka-data:/bitnami"
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+    depends_on:
+      - zookeeper
+    networks:
+      - bankNet
+
+  postgres:
+    image: postgres:latest
+    container_name: bankAccountDB
+    environment:
+      POSTGRES_USER: rootUser
+      POSTGRES_PASSWORD: pass-123
+      POSTGRES_DB: bankAccount
+      PGDATA: /data/postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_container:/var/lib/postgresql/data
+    networks:
+      - bankNet
+
+networks:
+  bankNet:
+    driver: bridge
+
+
+volumes:
+  mongodb_data_container:
+  postgres_data_container:
+
+  zookeeper-data:
+    driver: local
+  kafka-data:
+    driver: local
